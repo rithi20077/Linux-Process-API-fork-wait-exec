@@ -26,27 +26,45 @@ Test the C Program for the desired output.
 ## C Program to create new process using Linux API system calls fork() and getpid() , getppid() and to print process ID and parent Process ID using Linux API system calls
 ```
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
+#include <sys/wait.h>
+#include <stdlib.h>
 
 int main() {
-int pid = fork();
+    pid_t pid;
 
-if (pid == 0) { 
-    printf("I am child, my PID is %d\n", getpid()); 
-    printf("My parent PID is: %d\n", getppid()); 
-    sleep(2);  // Keep child alive for verification
-} else { 
-    printf("I am parent, my PID is %d\n", getpid()); 
-    wait(NULL); 
+    printf("Parent Process: PID = %d\n", getpid());
+
+    pid = fork(); // create child
+
+    if (pid < 0) {
+        perror("fork failed");
+        return 1;
+    } 
+    else if (pid == 0) {
+        // Child process
+        printf("Child Process: PID = %d, Parent PID = %d\n", getpid(), getppid());
+        printf("Child executing 'ls -l' command:\n\n");
+        execl("/bin/ls", "ls", "-l", NULL); // child runs ls command
+        perror("exec failed"); // only runs if execl fails
+        exit(1);
+    } 
+    else {
+        // Parent process
+        wait(NULL); // wait for child to finish
+        printf("\nParent Process Resumed: Child finished execution\n");
+    }
+
+    return 0;
 }
-}
+
 ```
 
 ##OUTPUT
 
-<img width="888" height="176" alt="image" src="https://github.com/user-attachments/assets/b88f80ba-32cb-4bd3-bea3-709bfdca4744" />
+<img width="770" height="406" alt="Screenshot from 2025-11-11 11-19-33" src="https://github.com/user-attachments/assets/063443be-25b5-48a4-ae50-7ae0c800c478" />
 
+<img width="635" height="271" alt="Screenshot from 2025-11-11 11-23-02" src="https://github.com/user-attachments/assets/bfbab42f-8f48-426c-9a7b-41872f03f905" />
 
 
 
@@ -57,52 +75,53 @@ if (pid == 0) {
 
 ```
 #include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/wait.h>
 #include <unistd.h>
+#include <sys/wait.h>
+#include <stdlib.h>
+#include <string.h>  // <--- Add this line
 
 int main() {
-int status;
+    pid_t pid;
+    char command[100];
 
-printf("Running ps with execl\n");
-if (fork() == 0) {
-    execl("ps", "ps", "-f", NULL);
-    perror("execl failed");
-    exit(1);
-}
-wait(&status);
+    printf("Parent Process: PID = %d\n", getpid());
 
-if (WIFEXITED(status)) {
-    printf("Child exited with status: %d\n", WEXITSTATUS(status));
-} else {
-    printf("Child did not exit successfully\n");
-}
+    // Ask user for command
+    printf("Enter a Linux command for the child to execute (e.g., ls -l): ");
+    fgets(command, sizeof(command), stdin);
+    // Remove newline at end
+    command[strcspn(command, "\n")] = 0;
 
-printf("Running ps with execlp (without full path)\n");
-if (fork() == 0) {
-    execlp("ps", "ps", "-f", NULL);
-    perror("execlp failed");
-    exit(1);
-}
-wait(&status);
+    pid = fork(); // create child
 
-if (WIFEXITED(status)) {
-    printf("Child exited for execlp with status: %d\n", WEXITSTATUS(status));
-} else {
-    printf("Child did not exit successfully\n");
-}
+    if (pid < 0) {
+        perror("fork failed");
+        exit(1);
+    } 
+    else if (pid == 0) {
+        // Child process
+        printf("Child Process: PID = %d, Parent PID = %d\n", getpid(), getppid());
+        printf("Child executing command: %s\n\n", command);
 
-printf("Done.\n");
-return 0;
+        // Execute the command using execlp
+        execlp(command, command, NULL);
+        perror("exec failed"); // Only runs if exec fails
+        exit(1); // Exit child with error if exec fails
+    } 
+    else {
+        // Parent process
+        wait(NULL); // Wait for child
+        printf("\nParent Process Resumed: Child finished execution\n");
+    }
+
+    return 0;
 }
 ```
 
 
 ##OUTPUT
 
-<img width="888" height="353" alt="image" src="https://github.com/user-attachments/assets/0f9f6625-22d1-4456-b184-6a87192606fb" />
-
+<img width="635" height="271" alt="Screenshot from 2025-11-11 11-22-22" src="https://github.com/user-attachments/assets/a987f247-ee96-435d-b7ca-d6e492e7dc01" />
 
 
 
